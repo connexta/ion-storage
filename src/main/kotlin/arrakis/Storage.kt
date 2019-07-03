@@ -6,8 +6,8 @@ abstract class Storage() {
 
     abstract fun readFromStorge(obj: kotlin.Any)
 
-    abstract fun update(obj: kotlin.Any)
-
     abstract fun deleteFromStorage(obj: kotlin.Any)
+
+    abstract fun updateFile(obj: kotlin.Any)
 
 }
