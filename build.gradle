@@ -5,7 +5,7 @@ plugins {
     id 'com.palantir.docker' version '0.22.1'
 }
 
-version '1.0-SNAPSHOT'
+version '0.1.0-SNAPSHOT'
 group 'arrakis'
 
 repositories {
@@ -60,7 +60,7 @@ task unpack(type: Copy) {
 
 docker {
     noCache true
-    name "${project.group}/${bootJar.baseName}"
+    name "${project.group}/${bootJar.baseName}:${project.version}"
     copySpec.from(tasks.bootJar.outputs).into("dependency")
     buildArgs(['DEPENDENCY': "dependency"])
 }

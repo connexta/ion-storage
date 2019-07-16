@@ -74,7 +74,7 @@ class FolderController: FolderOperations {
     fun post(@PathVariable folderName: String):
             ResponseEntity<String> {
 
-        val folderCreated = File(folderName).mkdirs()
+        //val folderCreated = File(folderName).mkdirs()
 
         //TODO: Remove this or use HATEOAS
         val responseBody = JSONObject(mapOf(
