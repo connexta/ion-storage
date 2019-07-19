@@ -75,7 +75,7 @@ metadata:
     app: ing
 spec:
   rules:
-  - host: www.test.it
+  - host: io-storage.test
     http:
       paths:
       - backend:

@@ -14,17 +14,13 @@ servers:
 
 paths:
 
-  /storage:
+  /folder:
     summary: root dir
     get:
-      summary: 'Retrieve metadata '
-      description: ''
+      summary: 'Retrieve metadata'
       operationId: getStorageRoot
-      responses:
-        default:
-          description: Default error sample response
 
-  /storage/{path}:
+  /folder/{folderName}:
     get:
       summary: Fetches file
       parameters:

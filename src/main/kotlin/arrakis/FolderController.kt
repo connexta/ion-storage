@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 2019 Connexta, LLC
+ *
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU
+ *  Lesser General Public License as published by the Free Software Foundation,
+ *  either version 3 of the License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU Lesser General Public License for more details.
+ *  A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ *  http://www.gnu.org/licenses/lgpl.html
+ */
 package arrakis
 
 import org.springframework.web.bind.annotation.RestController
@@ -11,29 +24,52 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.http.ResponseEntity
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.json.JSONObject
 import java.io.File
-import java.util.Date
+import java.lang.Exception
+import org.json.JSONObject
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.nio.file.Files
+import java.nio.file.Paths
 
 @RestController
 @RequestMapping("/folders")
 class FolderController: FolderOperations {
 
+    private val log: Logger = LoggerFactory
+        .getLogger(FolderController::class.java)
+    private val handler = ExceptionHandler()
+
+    /**
+     * Returns a list containing all created folders
+     */
     @GetMapping
-    fun get(): ResponseEntity<String> {
+    override fun get(): ResponseEntity<String> {
 
         val folders = mutableListOf<String?>()
 
-        File("/").listFiles()
-            .forEach { folder ->
-                if (folder.isDirectory) {
-                    folders.add(folder.name)
+        try {
+            File("/").listFiles()
+                .forEach { folder ->
+                    if (folder.isDirectory) {
+                        folders.add(folder.name)
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            return handler.handle(e)
+        }
 
-        val responseBody = JSONObject(mapOf(
-            "folders" to folders
-        ))
+        lateinit var responseBody: JSONObject
+
+        try {
+            responseBody = JSONObject(
+                mapOf( "folders" to folders))
+
+        } catch (e: Exception) {
+            return handler.handle(e)
+        }
+
+        log.info("List of folders successfully retrieved")
 
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -41,89 +77,103 @@ class FolderController: FolderOperations {
             .body(responseBody.toString())
     }
 
+    /**
+     * Returns names of files contained within the specified folder
+     */
     @GetMapping("/{folderName}")
-    fun get(@PathVariable folderName: String):
+    override fun get(@PathVariable folderName: String):
             ResponseEntity<String> {
 
-        val folder = File("/$folderName")
+        lateinit var folder: File
 
-        if (folder.exists() && folder.isDirectory) {
-            val files = folder.listFiles()
-            val lastModified = Date(folder.lastModified())
+        try {
+            folder = File("/$folderName")
 
-            val responseBody = JSONObject(mapOf(
-                "folder" to mapOf(
-                    "contents" to files,
-                    "last modified" to lastModified,
-                    "folder name" to folderName
-                )
-            ))
+            if (folder.exists() && folder.isDirectory) {
+                log.info("/$folderName directory found")
 
-            return ResponseEntity
-                .status(HttpStatus.OK)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(responseBody.toString())
+                val files = mutableListOf<String?>()
+                val responseBody: JSONObject
 
-        } else {
-            return ResponseEntity.notFound().build()
+
+                folder.listFiles()?.forEach { file ->
+                    files.add(file.name)
+                }
+                    responseBody = JSONObject(
+                        mapOf("folder" to mapOf(
+                                "contents" to files,
+                                "folder name" to folderName
+                        )))
+
+                return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(responseBody.toString())
+
+            } else return ResponseEntity.notFound().build()
+
+        } catch (e: Exception) {
+            return handler.handle(e)
         }
     }
 
-    //TODO: Decide between the two POST method designs
-    @PostMapping("/{folderName}")
-    fun post(@PathVariable folderName: String):
-            ResponseEntity<String> {
-
-        //val folderCreated = File(folderName).mkdirs()
-
-        //TODO: Remove this or use HATEOAS
-        val responseBody = JSONObject(mapOf(
-            "message" to "Folder '$folderName' created successfully"
-        ))
-
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(responseBody.toString())
-    }
-
+    /**
+     *  Given "folderName" in [payload], creates folder with that name
+     */
     @PostMapping
-    fun post(@RequestBody payload: Map<String, Any>):
+    override fun post(@RequestBody payload: Map<String, Any>):
             ResponseEntity<String> {
+
+        val message: String
+        val responseBody: JSONObject
+
         if ("folderName" in payload) {
             val folderName = payload["folderName"].toString()
             val folder = File(folderName)
 
-            if (folder.exists() && folder.isDirectory) {
-                return ResponseEntity
-                    .status(HttpStatus.CONFLICT).build()
+            try {
+                if (folder.exists() && folder.isDirectory) {
+                    message = "A folder with the name " +
+                            "\"$folderName\" already exists"
+                    responseBody = JSONObject(mapOf(
+                        "message" to message
+                    ))
+
+                    return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(responseBody.toString())
+                }
+
+                Files.createDirectories(
+                    Paths.get("/$folderName"))
+
+            } catch (e: Exception) {
+                return handler.handle(e)
             }
 
-            val folderCreated = folder.mkdirs()
-
-            if (folderCreated) {
-                //TODO: Remove this or use HATEOAS
-                val responseBody = JSONObject(mapOf(
-                    "message" to "Folder '$folderName' created successfully"
-                ))
-
-                return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(responseBody.toString())
-
-            } else {
-                return ResponseEntity
-                    .status(HttpStatus.CONFLICT).build()
-            }
-
+            return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .build()
         }
 
-        return ResponseEntity.badRequest().build()
+        message = "Parameter \"folderName\" missing from request body"
+        responseBody = JSONObject(mapOf(
+            "message" to message
+        ))
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(responseBody.toString())
     }
 
+    /**
+     * Given [folderName], it is renamed to
+     * the value of the key "folderName" in [payload]
+     */
     @PutMapping("/{folderName}")
-    fun put(@PathVariable folderName: String,
+    override fun put(@PathVariable folderName: String,
             @RequestBody payload: Map<String, Any>):
             ResponseEntity<String> {
 
@@ -131,11 +181,29 @@ class FolderController: FolderOperations {
 
         if (folder.exists() && folder.isDirectory) {
             if ("folderName" in payload) {
-                folder.renameTo(
-                    File(payload["folderName"].toString())
-                )
+                try {
+                    folder.renameTo(
+                        File(payload["folderName"].toString())
+                    )
+                } catch (e: Exception) { return handler.handle(e)}
+
             } else {
-                return ResponseEntity.badRequest().build()
+                val message = "\"folderName\" property missing" +
+                        " from request body"
+                val responseBody: JSONObject
+
+                try {
+                    responseBody = JSONObject(mapOf(
+                        "message" to message
+                    ))
+                } catch (e: Exception) {
+                    return handler.handle(e)
+                }
+
+                return ResponseEntity
+                    .badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(responseBody.toString())
             }
 
         } else {
@@ -145,26 +213,46 @@ class FolderController: FolderOperations {
         return ResponseEntity.ok().build()
     }
 
-    //TODO: Delete folders with files inside?
+    /**
+     * Deletes specified folder
+     */
     @DeleteMapping("/{folderName}")
-    fun delete(@PathVariable folderName: String):
+    override fun delete(@PathVariable folderName: String):
             ResponseEntity<String> {
 
         val folder = File("/$folderName")
 
         if (folder.exists() && folder.isDirectory) {
 
+            // Folder is not deleted if it contains files
             if (folder.listFiles().isNotEmpty()) {
+                lateinit var responseBody: JSONObject
+                val message = "\"$folderName\" is not empty," +
+                        " and therefore cannot be deleted"
+
+                try {
+                    responseBody = JSONObject(mapOf(
+                        "message" to message
+                    ))
+                } catch (e: Exception) {
+                    handler.handle(e)
+                }
+
                 return ResponseEntity
-                    .status(HttpStatus.CONFLICT).build()
+                    .status(HttpStatus.CONFLICT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(responseBody.toString())
             }
 
-            folder.delete()
+            try {
+                folder.delete()
+            } catch (e: Exception) {
+                handler.handle(e)
+            }
 
         } else {
             return ResponseEntity.notFound().build()
         }
-
         return ResponseEntity.ok().build()
     }
 }
