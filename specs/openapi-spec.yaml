@@ -1,6 +1,6 @@
 openapi: 3.0.2
 info:
-  title: ion-storage
+  title: ION Storage
   version: '${project.version}'
   description: ION storage abstraction service
   contact:
