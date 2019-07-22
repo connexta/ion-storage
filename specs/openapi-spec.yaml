@@ -1,8 +1,9 @@
+
 openapi: 3.0.2
 info:
   title: ion-storage
   version: '${project.version}'
-  description: ion storage abstraction service
+  description: ION storage abstraction service
   contact:
     name: 'Connexta, LLC'
     url: 'https://connexta.com'
@@ -14,81 +15,283 @@ servers:
 
 paths:
 
-  /folder:
-    summary: root dir
-    get:
-      summary: 'Retrieve metadata'
-      operationId: getStorageRoot
+  /folders:
+    summary: Folders collection
 
-  /folder/{folderName}:
     get:
-      summary: Fetches file
-      parameters:
-      - in: path
-        name: path
-        schema:
-          type: string
-        required: true
-        description: Write something here, please
-      description: Optional extended description in CommonMark or HTML.
+      operationId: getFolders
+      summary: Lists folders
+      description: 'Retrieves a list of all created folders. The contents of the folders is not retrieved, only their names.'
+
       responses:
         '200':
-          description: A JSON array of user names
+          description: A JSON object with an array of folders
+
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: object
+                properties:
+
+                  folders:
+                    type: array
+                    items:
+                      type: string
+                    example: [/foo, /bar]
 
     post:
-      summary: Add file to path
+      operationId: newFolder
+      summary: Creates folder
+      description: Creates new folder. The folder's name is taken from the request body.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                folderName:
+                  type: string
+                  example: arrakis
+
+      responses:
+        '201':
+          description: Created
+
+        '409':
+          description: A folder with that name already exists
+
+  /folders/{folderName}:
+    summary: Individual folder resource
+
+    get:
+      operationId: getFiles
+      summary: Lists folder's content
+      description: Retrieves a list with the folder's content. The actual files are not retrieved, only their names.
+
       parameters:
       - in: path
-        name: path
+        name: folderName
         schema:
           type: string
         required: true
-        description: Write something here, please
-      description: >-
-        uploads given file and places it in the given path, if the path doesn't
-        exist it will be created.
-      operationId: postStorageRoot
+        description: The folder's name
+
       responses:
-        default:
-          description: Write something here, please
+        '200':
+          description: A JSON array of files
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+                  folderName:
+                    type: string
+                    example: arrakis
+
+                  contents:
+                    type: array
+                    items:
+                      type: string
+                    example: [foo.png, bar.xml]
+
+        '404':
+          description: Folder not found
 
     put:
-      summary: Modify file at path
+      operationId: renameFolder
+      summary: Renames folder
+      description: Renames specified folder
+
       parameters:
       - in: path
-        name: path
+        name: folderName
         schema:
           type: string
         required: true
-        description: Write something here, please
-      description: >-
-        uploads given file and places it in the given path, if the path doesn't
-        exist it will be created.
-      operationId: putStorageRoot
+        description: The folder's name
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                folderName:
+                  type: string
+                  example: arrakis_2.0
+
       responses:
-        default:
-          description: Default error sample response
+        '200':
+          description: OK
+
+        '404':
+          description: Folder not found
+
+        '409':
+          description: A folder with that name already exists
 
     delete:
-      summary: Delete file at path
+      operationId: deleteFolder
+      summary: Deletes folder
+      description: Deletes specified folder
+
       parameters:
       - in: path
-        name: path
+        name: folderName
         schema:
           type: string
         required: true
-        description: Write something here, please
-      description: >-
-        uploads given file and places it in the given path, if the path doesn't
-        exist it will be created.
-      operationId: deleteStorageRoot
-      responses:
-        default:
-          description: Default error sample response
+        description: The folder's name
 
+      responses:
+        '200':
+          description: OK
+
+        '404':
+          description: Folder not found
+
+            # FILES
+
+  /folders/{folderName}/files/{filename}:
+    get:
+      operationId: downloadFile
+      summary: Downloads file
+      description: Downloads the specified file
+
+      parameters:
+      - in: path
+        name: folderName
+        schema:
+          type: string
+        required: true
+        description: The folder's name
+
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+        description: The filename
+
+      responses:
+        '200':
+          description: A file
+          content:
+            octetStream:
+              schema:
+                type: string
+                format: binary
+
+        '404':
+          description: Folder or file not found
+
+    post:
+      operationId: uploadFile
+      summary: Uploads file
+      description: Uploads specified file
+
+      parameters:
+
+      - in: path
+        name: folderName
+        schema:
+          type: string
+        required: true
+        description: The folder's name
+
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+        description: The filename
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+
+      responses:
+        '201':
+          description: Created
+
+        '404':
+          description: Folder not found
+
+        '409':
+          description: A file with that name already exists
+
+    put:
+      operationId: updateFile
+      summary: Updates file
+      description: Updates specified file
+
+      parameters:
+
+      - in: path
+        name: folderName
+        schema:
+          type: string
+        required: true
+        description: The folder's name
+
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+        description: The filename
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+
+      responses:
+        '200':
+          description: OK
+
+        '404':
+          description: Folder or file not found
+
+    delete:
+      operationId: deleteFile
+      summary: Deletes file
+      description: Deletes specified file
+
+      parameters:
+
+      - in: path
+        name: folderName
+        schema:
+          type: string
+        required: true
+        description: The folder's name
+
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+        description: The filename
+
+      responses:
+        '200':
+          description: OK
+
+        '404':
+          description: Folder or file not found
