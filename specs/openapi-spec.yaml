@@ -1,4 +1,3 @@
-
 openapi: 3.0.2
 info:
   title: ion-storage
@@ -14,35 +13,38 @@ servers:
 - url: '${rest.server.url}'
 
 paths:
-
   /folders:
     summary: Folders collection
-
     get:
       operationId: getFolders
       summary: Lists folders
       description: 'Retrieves a list of all created folders. The contents of the folders is not retrieved, only their names.'
+      tags:
+      - Folders
 
       responses:
+
         '200':
           description: A JSON object with an array of folders
-
           content:
             application/json:
               schema:
                 type: object
                 properties:
-
                   folders:
                     type: array
                     items:
                       type: string
-                    example: [/foo, /bar]
+                    example:
+                    - /foo
+                    - /bar
 
     post:
       operationId: newFolder
       summary: Creates folder
       description: Creates new folder. The folder's name is taken from the request body.
+      tags:
+      - Folders
 
       requestBody:
         required: true
@@ -56,19 +58,23 @@ paths:
                   example: arrakis
 
       responses:
+
         '201':
           description: Created
 
         '409':
           description: A folder with that name already exists
 
-  /folders/{folderName}:
+  '/folders/{folderName}':
+
     summary: Individual folder resource
 
     get:
       operationId: getFiles
       summary: Lists folder's content
-      description: Retrieves a list with the folder's content. The actual files are not retrieved, only their names.
+      description: 'Retrieves a list with the folder''s content. The actual files are not retrieved, only their names.'
+      tags:
+      - Folders
 
       parameters:
       - in: path
@@ -79,12 +85,14 @@ paths:
         description: The folder's name
 
       responses:
+
         '200':
           description: A JSON array of files
           content:
             application/json:
               schema:
                 type: object
+
                 properties:
 
                   folderName:
@@ -95,7 +103,9 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: [foo.png, bar.xml]
+                    example:
+                    - foo.png
+                    - bar.xml
 
         '404':
           description: Folder not found
@@ -104,6 +114,8 @@ paths:
       operationId: renameFolder
       summary: Renames folder
       description: Renames specified folder
+      tags:
+      - Folders
 
       parameters:
       - in: path
@@ -125,6 +137,7 @@ paths:
                   example: arrakis_2.0
 
       responses:
+
         '200':
           description: OK
 
@@ -138,6 +151,8 @@ paths:
       operationId: deleteFolder
       summary: Deletes folder
       description: Deletes specified folder
+      tags:
+      - Folders
 
       parameters:
       - in: path
@@ -148,21 +163,24 @@ paths:
         description: The folder's name
 
       responses:
+
         '200':
           description: OK
 
         '404':
           description: Folder not found
 
-            # FILES
+  '/folders/{folderName}/files/{filename}':
 
-  /folders/{folderName}/files/{filename}:
     get:
       operationId: downloadFile
       summary: Downloads file
       description: Downloads the specified file
+      tags:
+      - Files
 
       parameters:
+
       - in: path
         name: folderName
         schema:
@@ -178,6 +196,7 @@ paths:
         description: The filename
 
       responses:
+
         '200':
           description: A file
           content:
@@ -193,6 +212,8 @@ paths:
       operationId: uploadFile
       summary: Uploads file
       description: Uploads specified file
+      tags:
+      - Files
 
       parameters:
 
@@ -234,9 +255,10 @@ paths:
       operationId: updateFile
       summary: Updates file
       description: Updates specified file
+      tags:
+      - Files
 
       parameters:
-
       - in: path
         name: folderName
         schema:
@@ -260,8 +282,8 @@ paths:
                 file:
                   type: string
                   format: binary
-
       responses:
+
         '200':
           description: OK
 
@@ -272,6 +294,8 @@ paths:
       operationId: deleteFile
       summary: Deletes file
       description: Deletes specified file
+      tags:
+      - Files
 
       parameters:
 
@@ -290,6 +314,7 @@ paths:
         description: The filename
 
       responses:
+
         '200':
           description: OK
 
