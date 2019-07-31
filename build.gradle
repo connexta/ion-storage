@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2019 Connexta, LLC
+ *  
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU
+ *  Lesser General Public License as published by the Free Software Foundation,
+ *  either version 3 of the License, or any later version.
+ *  
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ *  See the GNU Lesser General Public License for more details. 
+ *  A copy of the GNU Lesser General Public License is distributed along with this program and can be found at
+ *  http://www.gnu.org/licenses/lgpl.html
+ */
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.30'
+    id 'org.springframework.boot' version '2.1.6.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+    id 'com.palantir.docker' version '0.22.1'
+}
+
+version '0.1.0-SNAPSHOT'
+group 'arrakis'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'org.springframework.boot:spring-boot-dependencies:2.0.5.RELEASE'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    
+    compile 'org.json:json:20180813'
+    
+    //testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile gradleTestKit()
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    components {
+        withModule('org.springframework:spring-beans') {
+            allVariants {
+                withDependencyConstraints {
+                    // Need to patch constraints because snakeyaml is an optional dependency
+                    it.findAll { it.name == 'snakeyaml' }.each { it.version { strictly '1.19' } }
+                }
+            }
+        }
+    }
+}
+
+
+configurations.all {
+    exclude module: 'slf4j-log4j12'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+bootJar {
+    baseName = 'ion-storage'
+    launchScript()
+}
+
+task unpack(type: Copy) {
+    dependsOn bootJar
+    from(zipTree(tasks.bootJar.outputs.files.singleFile))
+    into("build/dependency")
+}
+
+docker {
+    noCache true
+    name "${project.group}/${bootJar.baseName}:${project.version}"
+    copySpec.from(tasks.bootJar.outputs).into("dependency")
+    buildArgs(['DEPENDENCY': "dependency"])
+}
+
+build.dependsOn('docker')
